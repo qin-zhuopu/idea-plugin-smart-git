@@ -1,17 +1,16 @@
 package com.github.qinzhuopu.ideapluginsmartgit.toolWindow
 
-import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
-import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPanel
+import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.content.ContentFactory
-import com.github.qinzhuopu.ideapluginsmartgit.MyBundle
-import com.github.qinzhuopu.ideapluginsmartgit.services.MyProjectService
+import git4idea.GitUtil
+import git4idea.repo.GitRepository
+import javax.swing.BoxLayout
 import javax.swing.JButton
-
 
 class MyToolWindowFactory : ToolWindowFactory {
 
@@ -19,27 +18,29 @@ class MyToolWindowFactory : ToolWindowFactory {
         thisLogger().warn("Don't forget to remove all non-needed sample code files with their corresponding registration entries in `plugin.xml`.")
     }
 
-    override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        val myToolWindow = MyToolWindow(toolWindow)
-        val content = ContentFactory.getInstance().createContent(myToolWindow.getContent(), null, false)
-        toolWindow.contentManager.addContent(content)
-    }
-
     override fun shouldBeAvailable(project: Project) = true
 
-    class MyToolWindow(toolWindow: ToolWindow) {
+    override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
+        val textArea = JBTextArea()
+        val button = JButton("current branch").apply {
+            addActionListener {
 
-        private val service = toolWindow.project.service<MyProjectService>()
-
-        fun getContent() = JBPanel<JBPanel<*>>().apply {
-            val label = JBLabel(MyBundle.message("randomLabel", "?"))
-
-            add(label)
-            add(JButton(MyBundle.message("shuffle")).apply {
-                addActionListener {
-                    label.text = MyBundle.message("randomLabel", service.getRandomNumber())
+                var currentBranch = "Var currentBranch"
+                val repositories: List<GitRepository> = GitUtil.getRepositoryManager(project).repositories
+                if (repositories.isNotEmpty()) {
+                    currentBranch = repositories[0].currentBranch.toString()
                 }
-            })
+                textArea.text = currentBranch
+
+            }
         }
+
+        val contentPanel = JBPanel<JBPanel<*>>().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            add(button)
+            add(textArea)
+        }
+        val content = ContentFactory.getInstance().createContent(contentPanel, null, false)
+        toolWindow.contentManager.addContent(content)
     }
 }
